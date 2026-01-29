@@ -1,7 +1,7 @@
 
 import { Article } from '../types';
 
-const DB_NAME = 'WifiSyncDB';
+const DB_NAME = 'WifiSyncDB_v2';
 const STORE_NAME = 'articles';
 const DB_VERSION = 1;
 
@@ -16,7 +16,9 @@ export class DatabaseService {
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
         if (!db.objectStoreNames.contains(STORE_NAME)) {
-          db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+          const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+          store.createIndex('title', 'title', { unique: false });
+          store.createIndex('cachedAt', 'cachedAt', { unique: false });
         }
       };
 
@@ -51,15 +53,48 @@ export class DatabaseService {
     });
   }
 
-  async getStorageEstimate(): Promise<string> {
+  async searchArticles(query: string): Promise<Article[]> {
+    const all = await this.getAllArticles();
+    if (!query) return all;
+    const lowerQuery = query.toLowerCase();
+    return all.filter(a => 
+      a.title.toLowerCase().includes(lowerQuery) || 
+      a.excerpt.toLowerCase().includes(lowerQuery) ||
+      a.category.toLowerCase().includes(lowerQuery)
+    );
+  }
+
+  async getStorageStats() {
     if (navigator.storage && navigator.storage.estimate) {
-      const { usage } = await navigator.storage.estimate();
-      if (usage === undefined) return '0 KB';
-      if (usage < 1024) return `${usage} B`;
-      if (usage < 1024 * 1024) return `${(usage / 1024).toFixed(1)} KB`;
-      return `${(usage / (1024 * 1024)).toFixed(1)} MB`;
+      const { usage, quota } = await navigator.storage.estimate();
+      const used = usage || 0;
+      const total = quota || 1;
+      return {
+        usedStr: used < 1024 * 1024 ? `${(used / 1024).toFixed(1)} KB` : `${(used / (1024 * 1024)).toFixed(1)} MB`,
+        percent: (used / total) * 100
+      };
     }
-    return 'Unknown';
+    return { usedStr: 'Unknown', percent: 0 };
+  }
+
+  async autoClean(maxMb: number): Promise<number> {
+    const articles = await this.getAllArticles();
+    articles.sort((a, b) => (a.cachedAt || 0) - (b.cachedAt || 0));
+    
+    let currentUsageKb = articles.reduce((sum, a) => sum + (a.sizeKb || 50), 0);
+    let deletedCount = 0;
+
+    const transaction = this.db!.transaction(STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+
+    for (const article of articles) {
+      if (currentUsageKb / 1024 <= maxMb) break;
+      store.delete(article.id);
+      currentUsageKb -= (article.sizeKb || 50);
+      deletedCount++;
+    }
+
+    return deletedCount;
   }
 
   async clear(): Promise<void> {
