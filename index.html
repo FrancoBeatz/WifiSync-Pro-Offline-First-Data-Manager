@@ -9,67 +9,71 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@700&family=Manrope:wght@400;500;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            sync: {
+              blue: '#0B5FFF',
+              purple: '#7B61FF',
+              cyan: '#00E5FF',
+              dark: '#0F172A',
+              light: '#F8FAFC'
+            }
+          },
+          fontFamily: {
+            sans: ['Manrope', 'Inter', 'sans-serif'],
+            display: ['Space Grotesk', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          animation: {
+            'flow-bg': 'flow-gradient 5s ease infinite',
+            'float': 'float 3s ease-in-out infinite',
+            'slide-up': 'slideUp 0.4s ease-out',
+            'pulse-sync': 'pulseSync 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          },
+          keyframes: {
+            'flow-gradient': {
+              '0%, 100%': { 'background-position': '0% 50%' },
+              '50%': { 'background-position': '100% 50%' },
+            },
+            'float': {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-10px)' },
+            },
+            'slideUp': {
+              '0%': { transform: 'translateY(20px)', opacity: '0' },
+              '100%': { transform: 'translateY(0)', opacity: '1' },
+            },
+            'pulseSync': {
+              '0%, 100%': { opacity: '1', transform: 'scale(1)' },
+              '50%': { opacity: '0.6', transform: 'scale(1.05)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
   <style>
-    :root {
-      --primary: #0B5FFF;
-      --secondary: #7B61FF;
-      --accent: #00E5FF;
-    }
-    body {
-      font-family: 'Manrope', sans-serif;
-    }
-    h1, h2, h3, h4 {
-      font-family: 'Space Grotesk', sans-serif;
-    }
-    .font-mono-stats {
-      font-family: 'JetBrains Mono', monospace;
-    }
-    @keyframes flow-gradient {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
-    .animate-flow {
-      background: linear-gradient(-45deg, var(--primary), var(--secondary), var(--accent), var(--primary));
+    .animate-flow-gradient {
+      background: linear-gradient(-45deg, #0B5FFF, #7B61FF, #00E5FF, #0B5FFF);
       background-size: 400% 400%;
-      animation: flow-gradient 3s ease infinite;
+      animation: flow-gradient 5s ease infinite;
     }
-    .animate-pulse-soft {
-      animation: pulse-soft 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    }
-    @keyframes pulse-soft {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.7; }
-    }
-    .gradient-text {
-      background: linear-gradient(to right, var(--primary), var(--secondary), var(--accent));
+    .text-gradient {
+      background: linear-gradient(to right, #0B5FFF, #7B61FF);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    .card-fill {
-      position: relative;
-      overflow: hidden;
+    .blur-glow {
+      filter: blur(40px);
+      background: radial-gradient(circle, rgba(11, 95, 255, 0.15) 0%, transparent 70%);
     }
-    .card-fill::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      height: 100%;
-      width: var(--fill-width, 0%);
-      background: linear-gradient(to right, rgba(11, 95, 255, 0.05), rgba(123, 97, 255, 0.05));
-      transition: width 0.4s ease-out;
-      z-index: 0;
-    }
-    .shimmer {
-      background: linear-gradient(90deg, #f0f0f0 25%, #f8f8f8 50%, #f0f0f0 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
-    }
-    @keyframes shimmer {
-      0% { background-position: -200% 0; }
-      100% { background-position: 200% 0; }
-    }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
   </style>
 <script type="importmap">
 {
@@ -82,7 +86,7 @@
 }
 </script>
 </head>
-<body class="bg-[#F8FAFC] text-[#0F172A]">
+<body class="bg-sync-light text-sync-dark antialiased overflow-x-hidden">
   <div id="root"></div>
 </body>
 </html>
