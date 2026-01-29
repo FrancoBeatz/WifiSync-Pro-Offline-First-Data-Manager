@@ -9,13 +9,13 @@ interface ProgressBarProps {
 const ProgressBar: React.FC<ProgressBarProps> = ({ progress, label }) => {
   return (
     <div className="w-full">
-      <div className="flex justify-between mb-1">
-        <span className="text-sm font-medium text-blue-700">{label}</span>
-        <span className="text-sm font-medium text-blue-700">{Math.round(progress)}%</span>
+      <div className="flex justify-between items-end mb-2">
+        <span className="text-[11px] font-black uppercase tracking-widest text-slate-400">{label}</span>
+        <span className="font-mono-stats text-sm font-bold text-[#0B5FFF]">{Math.round(progress)}%</span>
       </div>
-      <div className="w-full bg-blue-100 rounded-full h-2.5">
+      <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
         <div 
-          className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-out" 
+          className="h-full rounded-full transition-all duration-500 ease-out animate-flow" 
           style={{ width: `${progress}%` }}
         ></div>
       </div>

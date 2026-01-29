@@ -8,54 +8,42 @@ interface NetworkStatusBadgeProps {
 }
 
 const NetworkStatusBadge: React.FC<NetworkStatusBadgeProps> = ({ status, effectiveType }) => {
-  const getStyles = () => {
-    switch (status) {
-      case NetworkStatus.ONLINE:
-        return 'bg-green-100 text-green-800 border-green-200';
-      case NetworkStatus.WEAK:
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case NetworkStatus.OFFLINE:
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
   const getLabel = () => {
     switch (status) {
-      case NetworkStatus.ONLINE: return 'Online (Strong)';
-      case NetworkStatus.WEAK: return `Weak Signal (${effectiveType?.toUpperCase()})`;
+      case NetworkStatus.ONLINE: return 'Strong';
+      case NetworkStatus.WEAK: return `Weak (${effectiveType})`;
       case NetworkStatus.OFFLINE: return 'Offline';
     }
   };
 
-  const getIcon = () => {
+  const getPillStyles = () => {
     switch (status) {
       case NetworkStatus.ONLINE:
-        return (
-          <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
-          </svg>
-        );
+        return 'bg-white border-slate-200 shadow-sm shadow-blue-50';
       case NetworkStatus.WEAK:
-        return (
-          <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-        );
+        return 'bg-amber-50 border-amber-200 text-amber-700';
       case NetworkStatus.OFFLINE:
-        return (
-          <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-1.414m-1.414-1.414a5 5 0 010-7.072m0 0l2.829 2.829m-4.243 2.829L3 21M6.343 6.343l2.829 2.828m0-2.828L6.343 9.172" />
-          </svg>
-        );
+        return 'bg-rose-50 border-rose-200 text-rose-700';
     }
   };
 
   return (
-    <div className={`flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStyles()}`}>
-      {getIcon()}
-      {getLabel()}
+    <div className={`flex items-center gap-2.5 px-3.5 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest border transition-all duration-500 ${getPillStyles()}`}>
+      <div className="relative flex items-center justify-center">
+        {status === NetworkStatus.ONLINE && (
+          <>
+            <div className="absolute w-3 h-3 bg-blue-400/30 rounded-full animate-ping"></div>
+            <div className="w-1.5 h-1.5 bg-[#0B5FFF] rounded-full"></div>
+          </>
+        )}
+        {status === NetworkStatus.WEAK && (
+          <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></div>
+        )}
+        {status === NetworkStatus.OFFLINE && (
+          <div className="w-1.5 h-1.5 bg-rose-500 rounded-full"></div>
+        )}
+      </div>
+      <span className={status === NetworkStatus.ONLINE ? 'text-slate-600' : ''}>{getLabel()}</span>
     </div>
   );
 };

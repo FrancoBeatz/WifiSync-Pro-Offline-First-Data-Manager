@@ -4,15 +4,71 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WifiSync Pro</title>
+  <title>SyncFlow</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@700&family=Manrope:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
-    @keyframes pulse-slow {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
+    :root {
+      --primary: #0B5FFF;
+      --secondary: #7B61FF;
+      --accent: #00E5FF;
     }
-    .animate-pulse-slow {
-      animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    body {
+      font-family: 'Manrope', sans-serif;
+    }
+    h1, h2, h3, h4 {
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    .font-mono-stats {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    @keyframes flow-gradient {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .animate-flow {
+      background: linear-gradient(-45deg, var(--primary), var(--secondary), var(--accent), var(--primary));
+      background-size: 400% 400%;
+      animation: flow-gradient 3s ease infinite;
+    }
+    .animate-pulse-soft {
+      animation: pulse-soft 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse-soft {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    .gradient-text {
+      background: linear-gradient(to right, var(--primary), var(--secondary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .card-fill {
+      position: relative;
+      overflow: hidden;
+    }
+    .card-fill::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: var(--fill-width, 0%);
+      background: linear-gradient(to right, rgba(11, 95, 255, 0.05), rgba(123, 97, 255, 0.05));
+      transition: width 0.4s ease-out;
+      z-index: 0;
+    }
+    .shimmer {
+      background: linear-gradient(90deg, #f0f0f0 25%, #f8f8f8 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
     }
   </style>
 <script type="importmap">
@@ -26,7 +82,7 @@
 }
 </script>
 </head>
-<body class="bg-gray-50 text-gray-900 font-sans">
+<body class="bg-[#F8FAFC] text-[#0F172A]">
   <div id="root"></div>
 </body>
 </html>

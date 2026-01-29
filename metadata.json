@@ -1,6 +1,6 @@
 {
-  "name": "WifiSync Pro: Offline-First Data Manager",
-  "description": "A robust React application demonstrating real-time network detection, automatic background syncing on strong Wi-Fi, and resilient IndexedDB local storage for seamless offline access.",
+  "name": "SyncFlow",
+  "description": "Sync smart. Flow offline. A premium data manager for the seamless offline experience.",
   "requestFramePermissions": [
     "geolocation"
   ]
