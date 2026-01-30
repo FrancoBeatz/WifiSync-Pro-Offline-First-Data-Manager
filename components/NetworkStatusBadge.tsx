@@ -5,13 +5,15 @@ import { NetworkStatus } from '../types';
 interface NetworkStatusBadgeProps {
   status: NetworkStatus;
   effectiveType?: string;
+  signalStrength: number;
+  isMetered: boolean;
 }
 
-const NetworkStatusBadge: React.FC<NetworkStatusBadgeProps> = ({ status, effectiveType }) => {
+const NetworkStatusBadge: React.FC<NetworkStatusBadgeProps> = ({ status, effectiveType, signalStrength, isMetered }) => {
   const getLabel = () => {
     switch (status) {
-      case NetworkStatus.ONLINE: return 'Strong';
-      case NetworkStatus.WEAK: return `Weak (${effectiveType})`;
+      case NetworkStatus.ONLINE: return isMetered ? 'Cellular' : 'Wi-Fi';
+      case NetworkStatus.WEAK: return 'Weak Signal';
       case NetworkStatus.OFFLINE: return 'Offline';
     }
   };
@@ -28,22 +30,25 @@ const NetworkStatusBadge: React.FC<NetworkStatusBadgeProps> = ({ status, effecti
   };
 
   return (
-    <div className={`flex items-center gap-2.5 px-3.5 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest border transition-all duration-500 ${getPillStyles()}`}>
-      <div className="relative flex items-center justify-center">
-        {status === NetworkStatus.ONLINE && (
-          <>
-            <div className="absolute w-3 h-3 bg-blue-400/30 rounded-full animate-ping"></div>
-            <div className="w-1.5 h-1.5 bg-[#0B5FFF] rounded-full"></div>
-          </>
-        )}
-        {status === NetworkStatus.WEAK && (
-          <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></div>
-        )}
-        {status === NetworkStatus.OFFLINE && (
-          <div className="w-1.5 h-1.5 bg-rose-500 rounded-full"></div>
-        )}
+    <div className={`flex items-center gap-3 px-4 py-2 rounded-full text-[11px] font-black uppercase tracking-widest border transition-all duration-500 ${getPillStyles()}`}>
+      {/* Signal Strength Bars */}
+      <div className="flex items-end gap-[2px] h-3 w-4">
+        {[1, 2, 3, 4].map((bar) => {
+          const isActive = status !== NetworkStatus.OFFLINE && signalStrength >= (bar * 25);
+          return (
+            <div 
+              key={bar}
+              className={`w-1 rounded-t-sm transition-all duration-300 ${isActive ? (status === NetworkStatus.WEAK ? 'bg-amber-400' : 'bg-sync-blue') : 'bg-slate-200'}`}
+              style={{ height: `${bar * 25}%` }}
+            />
+          );
+        })}
       </div>
-      <span className={status === NetworkStatus.ONLINE ? 'text-slate-600' : ''}>{getLabel()}</span>
+
+      <div className="flex flex-col leading-none">
+        <span className={status === NetworkStatus.ONLINE ? 'text-slate-900' : ''}>{getLabel()}</span>
+        <span className="text-[8px] opacity-60 font-bold mt-0.5">{effectiveType}</span>
+      </div>
     </div>
   );
 };

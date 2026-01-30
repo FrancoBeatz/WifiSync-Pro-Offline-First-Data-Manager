@@ -7,6 +7,22 @@ export enum NetworkStatus {
 
 export type Category = 'Technology' | 'Design' | 'Future' | 'Networking';
 export type Importance = 'high' | 'medium' | 'low';
+export type SyncStatus = 'idle' | 'syncing' | 'paused' | 'error' | 'success';
+export type DownloadState = 'idle' | 'downloading' | 'paused' | 'stopped' | 'completed' | 'saving';
+export type OfflineSessionState = 'active' | 'paused' | 'stopped' | 'idle';
+
+export interface NetworkQuality {
+  status: NetworkStatus;
+  effectiveType: string;
+  estimatedSpeedMbps: number;
+  isMetered: boolean;
+  signalStrength: number; // 0 to 100
+}
+
+export interface NetworkInfo {
+  saveData: boolean;
+  effectiveType: 'slow-2g' | '2g' | '3g' | '4g' | 'unknown';
+}
 
 export interface Article {
   id: string;
@@ -20,6 +36,23 @@ export interface Article {
   importance: Importance;
   sizeKb: number;
   cachedAt?: number;
+  version: number;
+  hasLocalChanges?: boolean;
+}
+
+export interface SyncLog {
+  id: string;
+  timestamp: number;
+  type: 'auto' | 'manual';
+  status: 'success' | 'failed';
+  details: string;
+  itemsSynced: number;
+}
+
+export interface StorageCategoryBreakdown {
+  category: Category;
+  sizeKb: number;
+  count: number;
 }
 
 export interface SyncStats {
@@ -28,19 +61,10 @@ export interface SyncStats {
   lastSync: number | null;
   storageUsed: string;
   quotaUsedPercent: number;
-}
-
-export interface NetworkQuality {
-  status: NetworkStatus;
-  effectiveType: string;
-  estimatedSpeedMbps: number;
-  isMetered: boolean;
-}
-
-export interface NetworkInfo extends EventTarget {
-  effectiveType: 'slow-2g' | '2g' | '3g' | '4g';
-  saveData: boolean;
-  onchange: EventListener;
+  transferSpeed: number; // KB/s
+  categoryBreakdown: StorageCategoryBreakdown[];
+  remainingDataSizeKb: number;
+  etaSeconds: number;
 }
 
 export interface SyncConfig {
@@ -48,5 +72,21 @@ export interface SyncConfig {
   wifiOnly: boolean;
   maxStorageMb: number;
   preferredCategories: Category[];
+  categoryPriorities: Record<Category, Importance>;
   smartSummaries: boolean;
+  retryAttempts: number;
+}
+
+export interface UserSession {
+  user: {
+    id: string;
+    email: string;
+    name: string;
+  } | null;
+  isAuthenticated: boolean;
+}
+
+export interface Conflict {
+  local: Article;
+  remote: Article;
 }

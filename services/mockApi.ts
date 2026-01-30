@@ -4,11 +4,13 @@ import { Article, Category, Importance } from '../types';
 const CATEGORIES: Category[] = ['Technology', 'Design', 'Future', 'Networking'];
 const IMPORTANCES: Importance[] = ['high', 'medium', 'low'];
 
+// Added version property to match Article interface
 const generateMockArticles = (): Article[] => Array.from({ length: 24 }, (_, i) => ({
   id: `art-${i + 1}`,
   category: CATEGORIES[i % CATEGORIES.length],
   importance: (i % 5 === 0) ? 'high' : IMPORTANCES[i % 3],
   sizeKb: Math.floor(Math.random() * 200) + 50,
+  version: 1,
   title: [
     "Resilient Web Apps with IndexedDB",
     "Mastering the Network Information API",

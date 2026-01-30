@@ -1,9 +1,14 @@
 
-import { Article } from '../types';
+import { Article, SyncLog, StorageCategoryBreakdown, Category } from '../types';
 
-const DB_NAME = 'WifiSyncDB_v2';
-const STORE_NAME = 'articles';
-const DB_VERSION = 1;
+const DB_NAME = 'SyncFlow_Production_V2';
+const STORES = {
+  ARTICLES: 'articles',
+  LOGS: 'sync_logs',
+  METADATA: 'metadata',
+  SEARCH_HISTORY: 'search_history'
+};
+const DB_VERSION = 4;
 
 export class DatabaseService {
   private db: IDBDatabase | null = null;
@@ -15,10 +20,19 @@ export class DatabaseService {
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
-          const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-          store.createIndex('title', 'title', { unique: false });
-          store.createIndex('cachedAt', 'cachedAt', { unique: false });
+        if (!db.objectStoreNames.contains(STORES.ARTICLES)) {
+          const store = db.createObjectStore(STORES.ARTICLES, { keyPath: 'id' });
+          store.createIndex('category', 'category', { unique: false });
+          store.createIndex('version', 'version', { unique: false });
+        }
+        if (!db.objectStoreNames.contains(STORES.LOGS)) {
+          db.createObjectStore(STORES.LOGS, { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains(STORES.SEARCH_HISTORY)) {
+          db.createObjectStore(STORES.SEARCH_HISTORY, { keyPath: 'query' });
+        }
+        if (!db.objectStoreNames.contains(STORES.METADATA)) {
+          db.createObjectStore(STORES.METADATA, { keyPath: 'key' });
         }
       };
 
@@ -33,35 +47,93 @@ export class DatabaseService {
 
   async saveArticle(article: Article): Promise<void> {
     if (!this.db) await this.init();
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      store.put({ ...article, cachedAt: Date.now() });
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-    });
+    const transaction = this.db!.transaction(STORES.ARTICLES, 'readwrite');
+    transaction.objectStore(STORES.ARTICLES).put({ ...article, cachedAt: Date.now() });
   }
 
   async getAllArticles(): Promise<Article[]> {
     if (!this.db) await this.init();
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(STORE_NAME, 'readonly');
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.getAll();
+    return new Promise((resolve) => {
+      const request = this.db!.transaction(STORES.ARTICLES, 'readonly').objectStore(STORES.ARTICLES).getAll();
       request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
     });
   }
 
   async searchArticles(query: string): Promise<Article[]> {
     const all = await this.getAllArticles();
     if (!query) return all;
-    const lowerQuery = query.toLowerCase();
+    const lowQuery = query.toLowerCase();
     return all.filter(a => 
-      a.title.toLowerCase().includes(lowerQuery) || 
-      a.excerpt.toLowerCase().includes(lowerQuery) ||
-      a.category.toLowerCase().includes(lowerQuery)
+      a.title.toLowerCase().includes(lowQuery) || 
+      a.excerpt.toLowerCase().includes(lowQuery) ||
+      a.category.toLowerCase().includes(lowQuery)
     );
+  }
+
+  async saveSearchQuery(query: string): Promise<void> {
+    if (!this.db || !query.trim()) return;
+    const transaction = this.db.transaction(STORES.SEARCH_HISTORY, 'readwrite');
+    transaction.objectStore(STORES.SEARCH_HISTORY).put({ query: query.trim(), timestamp: Date.now() });
+  }
+
+  async getSearchHistory(): Promise<string[]> {
+    if (!this.db) await this.init();
+    return new Promise((resolve) => {
+      const request = this.db!.transaction(STORES.SEARCH_HISTORY, 'readonly').objectStore(STORES.SEARCH_HISTORY).getAll();
+      request.onsuccess = () => {
+        const results = request.result.sort((a: any, b: any) => b.timestamp - a.timestamp).map((r: any) => r.query);
+        resolve(results.slice(0, 5));
+      };
+    });
+  }
+
+  async getCategoryBreakdown(): Promise<StorageCategoryBreakdown[]> {
+    const articles = await this.getAllArticles();
+    const map: Record<string, StorageCategoryBreakdown> = {};
+    articles.forEach(a => {
+      if (!map[a.category]) map[a.category] = { category: a.category, sizeKb: 0, count: 0 };
+      map[a.category].sizeKb += a.sizeKb;
+      map[a.category].count += 1;
+    });
+    return Object.values(map);
+  }
+
+  async autoClean(maxStorageMb: number): Promise<void> {
+    if (!this.db) await this.init();
+    const transaction = this.db!.transaction(STORES.ARTICLES, 'readwrite');
+    const store = transaction.objectStore(STORES.ARTICLES);
+    const request = store.getAll();
+    return new Promise((resolve) => {
+      request.onsuccess = () => {
+        const articles = request.result as Article[];
+        let totalSizeKb = articles.reduce((acc, a) => acc + a.sizeKb, 0);
+        if (totalSizeKb > maxStorageMb * 1024) {
+           const sorted = articles.sort((a, b) => (a.cachedAt || 0) - (b.cachedAt || 0));
+           let idx = 0;
+           while (totalSizeKb > maxStorageMb * 1024 && idx < sorted.length) {
+              const a = sorted[idx];
+              store.delete(a.id);
+              totalSizeKb -= a.sizeKb;
+              idx++;
+           }
+        }
+        resolve();
+      };
+    });
+  }
+
+  async addSyncLog(log: SyncLog): Promise<void> {
+    if (!this.db) await this.init();
+    const transaction = this.db!.transaction(STORES.LOGS, 'readwrite');
+    transaction.objectStore(STORES.LOGS).put(log);
+  }
+
+  async getSyncLogs(): Promise<SyncLog[]> {
+    if (!this.db) await this.init();
+    return new Promise((resolve) => {
+      const request = this.db!.transaction(STORES.LOGS, 'readonly').objectStore(STORES.LOGS).getAll();
+      request.onsuccess = () => resolve(request.result.sort((a: SyncLog, b: SyncLog) => b.timestamp - a.timestamp));
+    });
   }
 
   async getStorageStats() {
@@ -71,40 +143,18 @@ export class DatabaseService {
       const total = quota || 1;
       return {
         usedStr: used < 1024 * 1024 ? `${(used / 1024).toFixed(1)} KB` : `${(used / (1024 * 1024)).toFixed(1)} MB`,
-        percent: (used / total) * 100
+        percent: (used / total) * 100,
+        remainingMb: Math.max(0, (total - used) / (1024 * 1024))
       };
     }
-    return { usedStr: 'Unknown', percent: 0 };
-  }
-
-  async autoClean(maxMb: number): Promise<number> {
-    const articles = await this.getAllArticles();
-    articles.sort((a, b) => (a.cachedAt || 0) - (b.cachedAt || 0));
-    
-    let currentUsageKb = articles.reduce((sum, a) => sum + (a.sizeKb || 50), 0);
-    let deletedCount = 0;
-
-    const transaction = this.db!.transaction(STORE_NAME, 'readwrite');
-    const store = transaction.objectStore(STORE_NAME);
-
-    for (const article of articles) {
-      if (currentUsageKb / 1024 <= maxMb) break;
-      store.delete(article.id);
-      currentUsageKb -= (article.sizeKb || 50);
-      deletedCount++;
-    }
-
-    return deletedCount;
+    return { usedStr: 'Unknown', percent: 0, remainingMb: 0 };
   }
 
   async clear(): Promise<void> {
     if (!this.db) await this.init();
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      store.clear();
-      transaction.oncomplete = () => resolve();
-    });
+    const stores = [STORES.ARTICLES, STORES.LOGS, STORES.SEARCH_HISTORY];
+    const transaction = this.db!.transaction(stores, 'readwrite');
+    stores.forEach(s => transaction.objectStore(s).clear());
   }
 }
 
