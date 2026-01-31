@@ -75,6 +75,20 @@ export interface SyncConfig {
   categoryPriorities: Record<Category, Importance>;
   smartSummaries: boolean;
   retryAttempts: number;
+  // Advanced connectivity settings
+  autoPauseWeak: boolean;
+  autoResume: boolean;
+  backgroundSync: boolean;
+  syncPriority: 'low' | 'normal' | 'high';
+  connectivitySensitivity: 'low' | 'balanced' | 'high';
+  meteredProtection: boolean;
+  // Advanced storage settings
+  autoDeleteOld: boolean;
+  autoDeleteDurationDays: number;
+  // Security settings
+  encryptOffline: boolean;
+  sessionTimeoutMinutes: number;
+  debugMode: boolean;
 }
 
 export interface User {
