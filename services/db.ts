@@ -6,9 +6,10 @@ const STORES = {
   ARTICLES: 'articles',
   LOGS: 'sync_logs',
   METADATA: 'metadata',
-  SEARCH_HISTORY: 'search_history'
+  SEARCH_HISTORY: 'search_history',
+  SYNC_STATE: 'sync_state'
 };
-const DB_VERSION = 4;
+const DB_VERSION = 6;
 
 export class DatabaseService {
   private db: IDBDatabase | null = null;
@@ -34,6 +35,9 @@ export class DatabaseService {
         if (!db.objectStoreNames.contains(STORES.METADATA)) {
           db.createObjectStore(STORES.METADATA, { keyPath: 'key' });
         }
+        if (!db.objectStoreNames.contains(STORES.SYNC_STATE)) {
+          db.createObjectStore(STORES.SYNC_STATE, { keyPath: 'id' });
+        }
       };
 
       request.onsuccess = () => {
@@ -48,7 +52,12 @@ export class DatabaseService {
   async saveArticle(article: Article): Promise<void> {
     if (!this.db) await this.init();
     const transaction = this.db!.transaction(STORES.ARTICLES, 'readwrite');
-    transaction.objectStore(STORES.ARTICLES).put({ ...article, cachedAt: Date.now() });
+    const store = transaction.objectStore(STORES.ARTICLES);
+    return new Promise((resolve, reject) => {
+      const request = store.put({ ...article, cachedAt: article.cachedAt || Date.now() });
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
   }
 
   async getAllArticles(): Promise<Article[]> {
@@ -57,6 +66,26 @@ export class DatabaseService {
       const request = this.db!.transaction(STORES.ARTICLES, 'readonly').objectStore(STORES.ARTICLES).getAll();
       request.onsuccess = () => resolve(request.result);
     });
+  }
+
+  async saveSyncState(state: any): Promise<void> {
+    if (!this.db) await this.init();
+    const transaction = this.db!.transaction(STORES.SYNC_STATE, 'readwrite');
+    transaction.objectStore(STORES.SYNC_STATE).put({ id: 'current', ...state });
+  }
+
+  async getSyncState(): Promise<any | null> {
+    if (!this.db) await this.init();
+    return new Promise((resolve) => {
+      const request = this.db!.transaction(STORES.SYNC_STATE, 'readonly').objectStore(STORES.SYNC_STATE).get('current');
+      request.onsuccess = () => resolve(request.result || null);
+    });
+  }
+
+  async clearSyncState(): Promise<void> {
+    if (!this.db) await this.init();
+    const transaction = this.db!.transaction(STORES.SYNC_STATE, 'readwrite');
+    transaction.objectStore(STORES.SYNC_STATE).delete('current');
   }
 
   async searchArticles(query: string): Promise<Article[]> {
@@ -73,7 +102,10 @@ export class DatabaseService {
   async saveSearchQuery(query: string): Promise<void> {
     if (!this.db || !query.trim()) return;
     const transaction = this.db.transaction(STORES.SEARCH_HISTORY, 'readwrite');
-    transaction.objectStore(STORES.SEARCH_HISTORY).put({ query: query.trim(), timestamp: Date.now() });
+    transaction.objectStore(STORES.SEARCH_HISTORY).put({ 
+      query: query.trim(), 
+      timestamp: Date.now() 
+    });
   }
 
   async getSearchHistory(): Promise<string[]> {
@@ -81,8 +113,11 @@ export class DatabaseService {
     return new Promise((resolve) => {
       const request = this.db!.transaction(STORES.SEARCH_HISTORY, 'readonly').objectStore(STORES.SEARCH_HISTORY).getAll();
       request.onsuccess = () => {
-        const results = request.result.sort((a: any, b: any) => b.timestamp - a.timestamp).map((r: any) => r.query);
-        resolve(results.slice(0, 5));
+        const results = (request.result as any[])
+          .sort((a, b) => b.timestamp - a.timestamp)
+          .map(r => r.query);
+        const unique = Array.from(new Set(results));
+        resolve(unique.slice(0, 5));
       };
     });
   }
@@ -96,30 +131,6 @@ export class DatabaseService {
       map[a.category].count += 1;
     });
     return Object.values(map);
-  }
-
-  async autoClean(maxStorageMb: number): Promise<void> {
-    if (!this.db) await this.init();
-    const transaction = this.db!.transaction(STORES.ARTICLES, 'readwrite');
-    const store = transaction.objectStore(STORES.ARTICLES);
-    const request = store.getAll();
-    return new Promise((resolve) => {
-      request.onsuccess = () => {
-        const articles = request.result as Article[];
-        let totalSizeKb = articles.reduce((acc, a) => acc + a.sizeKb, 0);
-        if (totalSizeKb > maxStorageMb * 1024) {
-           const sorted = articles.sort((a, b) => (a.cachedAt || 0) - (b.cachedAt || 0));
-           let idx = 0;
-           while (totalSizeKb > maxStorageMb * 1024 && idx < sorted.length) {
-              const a = sorted[idx];
-              store.delete(a.id);
-              totalSizeKb -= a.sizeKb;
-              idx++;
-           }
-        }
-        resolve();
-      };
-    });
   }
 
   async addSyncLog(log: SyncLog): Promise<void> {
@@ -152,7 +163,7 @@ export class DatabaseService {
 
   async clear(): Promise<void> {
     if (!this.db) await this.init();
-    const stores = [STORES.ARTICLES, STORES.LOGS, STORES.SEARCH_HISTORY];
+    const stores = [STORES.ARTICLES, STORES.LOGS, STORES.SEARCH_HISTORY, STORES.SYNC_STATE];
     const transaction = this.db!.transaction(stores, 'readwrite');
     stores.forEach(s => transaction.objectStore(s).clear());
   }

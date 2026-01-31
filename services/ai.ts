@@ -8,12 +8,12 @@ import { Article } from "../types";
  */
 export const getSmartSummary = async (article: Article): Promise<string> => {
   try {
-    // Create new instance to ensure up-to-date API key usage
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `Provide a 2-sentence ultra-concise executive summary for the following article content: "${article.content.substring(0, 1000)}"`
     });
+    // Use .text property directly as per latest SDK guidelines
     return response.text || "Summary unavailable.";
   } catch (e) {
     console.error("AI Summary failed", e);
@@ -33,7 +33,6 @@ export const predictImportance = async (titles: string[]): Promise<Record<string
       contents: `Based on these article titles, categorize each as "high", "medium", or "low" priority for an offline reader interested in technology and efficiency. Titles: ${titles.join(', ')}`,
       config: { 
         responseMimeType: "application/json",
-        // Using responseSchema for deterministic output structure
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -43,7 +42,7 @@ export const predictImportance = async (titles: string[]): Promise<Record<string
                 type: Type.OBJECT,
                 properties: {
                   title: { type: Type.STRING },
-                  priority: { type: Type.STRING, enum: ['high', 'medium', 'low'] }
+                  priority: { type: Type.STRING }
                 },
                 required: ['title', 'priority']
               }
@@ -54,7 +53,8 @@ export const predictImportance = async (titles: string[]): Promise<Record<string
       }
     });
 
-    const result = JSON.parse(response.text || '{}');
+    const jsonText = response.text || '{}';
+    const result = JSON.parse(jsonText);
     const priorityMap: Record<string, 'high' | 'medium' | 'low'> = {};
     
     if (result.classifications && Array.isArray(result.classifications)) {

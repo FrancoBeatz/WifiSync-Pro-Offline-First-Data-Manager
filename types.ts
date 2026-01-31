@@ -77,13 +77,18 @@ export interface SyncConfig {
   retryAttempts: number;
 }
 
+export interface User {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  createdAt: string;
+}
+
 export interface UserSession {
-  user: {
-    id: string;
-    email: string;
-    name: string;
-  } | null;
+  user: User | null;
   isAuthenticated: boolean;
+  token?: string;
 }
 
 export interface Conflict {
