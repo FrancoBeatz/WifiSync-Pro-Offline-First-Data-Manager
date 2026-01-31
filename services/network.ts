@@ -6,7 +6,7 @@ export const getNetworkQuality = async (): Promise<NetworkQuality> => {
   const connection = (navigator as any).connection as NetworkInfo;
   
   let status = NetworkStatus.ONLINE;
-  let speed = 25; // Default fallback for wifi
+  let speed = 25; 
   let isMetered = false;
   let signalStrength = 100;
 
@@ -32,34 +32,27 @@ export const getNetworkQuality = async (): Promise<NetworkQuality> => {
       speed = 2;
       signalStrength = 45;
     } else {
-      speed = 50; // Broadband
+      speed = 50; 
       signalStrength = 95;
     }
   }
 
-  // Active check
+  // Connectivity probe
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 2000);
     
-    const start = Date.now();
-    // Using a reliable pixel fetch to check true connectivity latency
+    // Probing a lightweight endpoint to confirm real-world reachability
     await fetch('https://www.google.com/favicon.ico', { 
       mode: 'no-cors', 
       cache: 'no-store',
       signal: controller.signal 
     });
     clearTimeout(timeoutId);
-    
-    const duration = Date.now() - start;
-    if (duration > 1200) {
-      status = NetworkStatus.WEAK;
-      signalStrength = Math.min(signalStrength, 30);
-    }
   } catch (e) {
-    // If fetch fails explicitly while navigator.onLine is true, it's a weak/captive portal situation
+    // Captive portal or severe latency
     status = NetworkStatus.WEAK;
-    signalStrength = 10;
+    signalStrength = Math.min(signalStrength, 15);
   }
 
   return {
